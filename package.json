@@ -1,0 +1,40 @@
+{
+  "name": "threejs.template",
+  "version": "1.0.0",
+  "description": "Playground to test threejs",
+  "author": "Serchinastico <hi@serchinastico.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Serchinastico/threejs.template#readme",
+  "main": "index.js",
+  "scripts": {
+    "bundle": "webpack-cli",
+    "deploy": "gh-pages -d dist",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "start": "webpack-dev-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Serchinastico/threejs.template.git"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "@types/three": "^0.169.0",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "gh-pages": "^6.2.0",
+    "globals": "^15.11.0",
+    "html-webpack-plugin": "^5.6.3",
+    "prettier": "3.3.3",
+    "ts-loader": "^9.5.1",
+    "ts-shader-loader": "^2.0.2",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.12.2",
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.1.0"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  }
+}
