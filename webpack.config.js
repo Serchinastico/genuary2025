@@ -2,7 +2,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
-  entry: "./src/index.ts",
+  entry: { day01: "./src/day01.ts", index: "./src/index.ts" },
   devtool: "source-map",
   module: {
     rules: [
@@ -21,14 +21,19 @@ module.exports = {
     extensions: [".ts", ".js"],
   },
   output: {
-    filename: "index.js",
+    filename: "[name].js",
     path: path.resolve(__dirname, "dist"),
   },
   plugins: [
     new HtmlWebpackPlugin({
-      title: "Threejs",
+      title: "Genuary 2025",
       filename: "index.html",
       template: "src/index.html",
+    }),
+    new HtmlWebpackPlugin({
+      title: "Day 01",
+      filename: "day01.html",
+      template: "src/day01.html",
     }),
   ],
   performance: {
