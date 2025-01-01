@@ -1,6 +1,6 @@
-# three.js template repository
+# Genuary 2025
 
-Template repository to test things with [three.js](https://threejs.org/)
+My take on this fantastic initiative. I prefer not to follow it day by day but rather keep it enjoyable and progress at my own pace.
 
 ## Development
 
