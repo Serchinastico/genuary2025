@@ -35,6 +35,11 @@ module.exports = {
       filename: "day01.html",
       template: "src/day01.html",
     }),
+    new HtmlWebpackPlugin({
+      title: "Day 02",
+      filename: "day02.html",
+      template: "src/day02.html",
+    }),
   ],
   performance: {
     hints: false,
