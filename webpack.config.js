@@ -2,7 +2,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
-  entry: { day01: "./src/day01.ts", index: "./src/index.ts" },
+  entry: { day01: "./src/day01.ts", day02: "./src/day02.ts", index: "./src/index.ts" },
   devtool: "source-map",
   module: {
     rules: [
