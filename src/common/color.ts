@@ -58,3 +58,9 @@ export const getGradient = (colorPalette: string) => {
       return chroma.scale(colorPalette);
   }
 };
+
+export const getRandomColor = () => {
+  // Generate a random color in hex format
+  const randomInt = () => Math.floor(Math.random() * 256);
+  return `rgb(${randomInt()},${randomInt()},${randomInt()})`;
+};

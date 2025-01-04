@@ -1,8 +1,17 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
+const numberOfPages = 3;
+const pages = Array.from({ length: numberOfPages }, (_, i) => `day${String(i + 1).padStart(2, "0")}`);
+
 module.exports = {
-  entry: { day01: "./src/day01.ts", day02: "./src/day02.ts", index: "./src/index.ts" },
+  entry: {
+    index: "./src/index.ts",
+    ...pages.reduce((config, page) => {
+      config[page] = `./src/${page}.ts`;
+      return config;
+    }, {}),
+  },
   devtool: "source-map",
   module: {
     rules: [
@@ -30,16 +39,16 @@ module.exports = {
       filename: "index.html",
       template: "src/index.html",
     }),
-    new HtmlWebpackPlugin({
-      title: "Day 01",
-      filename: "day01.html",
-      template: "src/day01.html",
-    }),
-    new HtmlWebpackPlugin({
-      title: "Day 02",
-      filename: "day02.html",
-      template: "src/day02.html",
-    }),
+    ...pages.map(
+      (page) =>
+        new HtmlWebpackPlugin({
+          inject: true,
+          template: `src/${page}.html`,
+          filename: `${page}.html`,
+          title: page,
+          chunks: [page],
+        })
+    ),
   ],
   performance: {
     hints: false,
