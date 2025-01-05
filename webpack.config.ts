@@ -8,7 +8,10 @@ import { TsconfigPathsPlugin } from "tsconfig-paths-webpack-plugin";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const numberOfPages = 4;
+const files = fs.readdirSync("./src/days", { withFileTypes: true });
+const numberOfPages = files
+  .filter((file) => !isNaN(Number.parseInt(file.name)))
+  .reduce((acc, file) => Math.max(Number.parseInt(file.name), acc), 0);
 const pageNames = Array.from({ length: numberOfPages }, (_, i) => `${String(i + 1).padStart(2, "0")}`);
 const pageFiles = pageNames.map((page) => {
   const hasSpecificHtmlFile = fs.existsSync(`./src/days/${page}/index.html`);

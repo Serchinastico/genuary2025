@@ -73,6 +73,8 @@ const render = ({ animation, context }: { animation: CanvasAnimation; context: C
 
 const main = () => {
   const context = prepareCanvas({ id: "#canvas", height: CONFIG.HEIGHT, width: CONFIG.WIDTH });
+  if (!context) return;
+
   const animations: PathAnimation[] = [];
 
   for (let i = 0; i < CONFIG.NUM_VECTORS; i++) {

@@ -1,3 +1,4 @@
+import { prepareCanvas } from "@/common/canvas";
 import { getGradient } from "@/common/color";
 
 const CONFIG = {
@@ -18,13 +19,6 @@ const gradient = getGradient("fire");
 interface CanvasAnimation {
   frame: number;
 }
-
-const prepareCanvas = ({ id }: { id: string }) => {
-  const canvas = document.querySelector<HTMLCanvasElement>(id);
-  canvas.width = CONFIG.WIDTH;
-  canvas.height = CONFIG.HEIGHT;
-  return canvas.getContext("2d");
-};
 
 const render = ({ animation, context }: { animation: CanvasAnimation; context: CanvasRenderingContext2D }) => {
   context.clearRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
@@ -58,7 +52,9 @@ const render = ({ animation, context }: { animation: CanvasAnimation; context: C
 };
 
 const main = () => {
-  const context = prepareCanvas({ id: "#canvas" });
+  const context = prepareCanvas({ id: "#canvas", height: CONFIG.HEIGHT, width: CONFIG.WIDTH });
+  if (!context) return;
+
   const animation = { frame: 0 } satisfies CanvasAnimation;
 
   requestAnimationFrame(() => render({ animation, context }));
