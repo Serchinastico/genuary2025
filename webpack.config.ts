@@ -45,6 +45,7 @@ const config: webpack.Configuration = {
       title: "Genuary 2025",
       filename: "index.html",
       template: "src/index.html",
+      templateParameters: { numberOfPages },
     }),
     ...pageFiles.map(
       ({ htmlTemplate, htmlFile, name }) =>

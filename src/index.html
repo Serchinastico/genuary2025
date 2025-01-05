@@ -9,10 +9,9 @@
 </head>
 <body>
 <section>
-  <a href="01.html">Day 01</a>
-  <a href="02.html">Day 02</a>
-  <a href="03.html">Day 03</a>
-  <a href="04.html">Day 04</a>
+  <% for (let i = 1; i <= numberOfPages; i++) { %>
+  <a href="<%= i.toString().padStart(2, '0') %>.html">Day <%= i %></a>
+  <% } %>
 </section>
 </body>
 </html>
