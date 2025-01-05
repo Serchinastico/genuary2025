@@ -1,7 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
-const numberOfPages = 3;
+const numberOfPages = 4;
 const pages = Array.from({ length: numberOfPages }, (_, i) => `day${String(i + 1).padStart(2, "0")}`);
 
 module.exports = {
