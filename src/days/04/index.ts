@@ -1,4 +1,4 @@
-import { prepareCanvas } from "./common/canvas";
+import { prepareCanvas } from "@/common/canvas";
 import chroma from "chroma-js";
 
 const CONFIG = {

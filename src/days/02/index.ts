@@ -1,4 +1,4 @@
-import { getGradient } from "./common/color";
+import { getGradient } from "@/common/color";
 
 const CONFIG = {
   HALF_WIDTH: window.innerWidth * 0.5,

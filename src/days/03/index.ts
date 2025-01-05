@@ -1,6 +1,6 @@
-import { prepareCanvas } from "./common/canvas";
-import { Point2D, Vector2D } from "./common/geometry";
-import { getGradient } from "./common/color";
+import { prepareCanvas } from "@/common/canvas";
+import { Point2D, Vector2D } from "@/common/geometry";
+import { getGradient } from "@/common/color";
 
 const CONFIG = {
   HALF_WIDTH: window.innerWidth * 0.5,
