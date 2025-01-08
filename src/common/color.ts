@@ -55,7 +55,7 @@ export const getGradient = (colorPalette: string) => {
         "#ff6d00, #ff7900, #ff8500, #ff9100, #ff9e00, #240046, #3c096c, #5a189a, #7b2cbf, #9d4edd"
       );
     default:
-      return chroma.scale(colorPalette);
+      return chroma.scale(colorPalette as unknown as chroma.ChromaInput[]);
   }
 };
 
