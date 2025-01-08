@@ -12,16 +12,17 @@ const files = fs.readdirSync("./src/days", { withFileTypes: true });
 const numberOfPages = files
   .filter((file) => !isNaN(Number.parseInt(file.name)))
   .reduce((acc, file) => Math.max(Number.parseInt(file.name), acc), 0);
-const pageNames = Array.from({ length: numberOfPages }, (_, i) => `${String(i + 1).padStart(2, "0")}`);
-const pageFiles = pageNames.map((page) => {
-  const hasSpecificHtmlFile = fs.existsSync(`./src/days/${page}/index.html`);
-  return {
-    name: page,
-    htmlTemplate: hasSpecificHtmlFile ? `./src/days/${page}/index.html` : "./src/days/base/index.html",
-    htmlFile: `${page}.html`,
-    tsFile: `./src/days/${page}/index.ts`,
-  };
-});
+const pageFiles = Array.from({ length: numberOfPages }, (_, i) => `${String(i + 1).padStart(2, "0")}`)
+  .filter((page) => fs.existsSync(`./src/days/${page}`))
+  .map((page) => {
+    const hasSpecificHtmlFile = fs.existsSync(`./src/days/${page}/index.html`);
+    return {
+      name: page,
+      htmlTemplate: hasSpecificHtmlFile ? `./src/days/${page}/index.html` : "./src/days/base/index.html",
+      htmlFile: `${page}.html`,
+      tsFile: `./src/days/${page}/index.ts`,
+    };
+  });
 
 const config: webpack.Configuration = {
   entry: {
@@ -48,7 +49,7 @@ const config: webpack.Configuration = {
       title: "Genuary 2025",
       filename: "index.html",
       template: "src/index.html",
-      templateParameters: { numberOfPages },
+      templateParameters: { pageFiles },
     }),
     ...pageFiles.map(
       ({ htmlTemplate, htmlFile, name }) =>

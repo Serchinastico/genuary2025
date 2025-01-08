@@ -8,10 +8,7 @@
   <title><%= htmlWebpackPlugin.options.title %></title>
 </head>
 <body>
-<section>
-  <% pageFiles.forEach((file) => { %>
-  <a href="<%= file.htmlFile %>">Day <%= file.name %></a>
-  <% }) %>
-</section>
+<canvas id="canvas"></canvas>
 </body>
 </html>
+
