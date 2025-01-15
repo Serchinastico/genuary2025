@@ -1,3 +1,5 @@
+type Range = { max: number; min: number };
+
 export const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
 };
@@ -20,3 +22,9 @@ export const interpolate = {
     return 7.5625 * t * t + 0.984375;
   },
 };
+
+export const randomInt = ({ max, min = 0 }: Range) => {
+  return min + Math.random() * (max - min);
+};
+
+export const randomBool = () => Math.random() > 0.5;
