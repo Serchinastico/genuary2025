@@ -6,7 +6,7 @@ import chroma from "chroma-js";
 const CONFIG = {
   WIDTH: window.innerWidth,
   HEIGHT: window.innerHeight,
-  TARGET_NUMBER_OF_PARTICLES: 500,
+  TARGET_NUMBER_OF_PARTICLES: 100,
   PARTICLES_DECAY_TIME: 50,
   PARTICLES_DEATH_TIME: 100,
   PARTICLE_WIDTH: 3,
@@ -32,7 +32,8 @@ interface CanvasAnimation {
   particles: Particle[];
 }
 
-const color = chroma.scale(["#E3C654", "#D89703"]).mode("lch");
+// const color = chroma.scale(["#E3C654", "#D89703"]).mode("lch");
+const color = chroma.scale(["#4C7BE8", "#175397"]).mode("lch");
 
 const createSubparticles = ({ parent }: { parent: Particle }) => {
   const particles: Subparticle[] = [];
@@ -41,7 +42,7 @@ const createSubparticles = ({ parent }: { parent: Particle }) => {
   let velocity = { ...parent.velocity };
   for (let i = 0; i < parent.age; i++) {
     position = { x: position.x + parent.velocity.x, y: position.y + parent.velocity.y };
-    const angle = (parent.isClockwise ? 1 : -1) * (Math.PI / 180);
+    const angle = 2 * (parent.isClockwise ? 1 : -1) * (Math.PI / 180);
     const rotatedX = velocity.x * Math.cos(angle) - velocity.y * Math.sin(angle);
     const rotatedY = velocity.x * Math.sin(angle) + velocity.y * Math.cos(angle);
     velocity = { x: rotatedX * parent.frictionFactor, y: rotatedY * parent.frictionFactor };
