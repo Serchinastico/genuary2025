@@ -193,6 +193,10 @@ function createRenderTarget(width: number, height: number) {
 }
 
 function main() {
+  if (document.title !== "Genuary 08") {
+    return;
+  }
+  
   const width = 1000,
     height = 1000;
 
