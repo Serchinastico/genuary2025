@@ -3,6 +3,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import vertexShader from "./shaders/vertex.glsl";
 import fragmentShader from "./shaders/fragment.fs";
 
+const CONFIG = {
+  WIDTH: 1280,
+  HEIGHT: 720,
+};
+
 interface Simulation {
   material: THREE.ShaderMaterial;
   uvPlane: THREE.Mesh;
@@ -59,7 +64,7 @@ function createSimulation(): Simulation {
 }
 
 const createCamera = () => {
-  const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 10000);
+  const camera = new THREE.PerspectiveCamera(40, CONFIG.WIDTH / CONFIG.HEIGHT, 0.1, 10000);
   camera.position.z = 5;
   return camera;
 };
@@ -73,15 +78,13 @@ function main() {
 
   const renderer = new THREE.WebGLRenderer();
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(CONFIG.WIDTH, CONFIG.HEIGHT);
   document.body.appendChild(renderer.domElement);
 
   const backgroundColor = new THREE.Color(0x3399ee);
   renderer.setClearColor(backgroundColor, 1);
 
   const controls = new OrbitControls(simulation.camera, renderer.domElement);
-  controls.maxDistance = 10;
-  controls.minDistance = 2;
   controls.enableDamping = true;
 
   let frame = 0;
