@@ -221,7 +221,7 @@ float scene(vec3 position)
 //    pos.xy *= rot2D(0.025 * u_rightHandRotation);
 
     position.xy *= rot2D(0.05 * u_rightHandRotation);
-    float d1 = sdRoundBox(position, vec3(.1 + 0.25 * u_thumbToIndexDistance), 0.1 * (1.0 - u_thumbToIndexDistance));
+    float d1 = sdRoundBox(position, vec3(.25 + .25 * u_thumbToIndexDistance), .05 + .4 * (1. - u_thumbToMiddleDistance));
 
 //    float d1 = opSmoothSubtraction(
 //        distance(position, vec3(0, 0, 0)) - .2,

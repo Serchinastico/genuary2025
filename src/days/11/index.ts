@@ -8,9 +8,11 @@ import { HAND_CONNECTIONS, Hands, Landmark, Results } from "@mediapipe/hands";
 import { clamp } from "@/common/math";
 
 const CONFIG = {
-  WIDTH: 512,
-  HEIGHT: 512,
+  WIDTH: 768,
+  HEIGHT: 768,
 };
+
+const DISTANCE_FACTOR = 0.5;
 
 const THUMB = 4;
 const INDEX = 8;
@@ -130,16 +132,10 @@ const handGestureHandler = async (simulation: Simulation) => {
 
       if (hand.label === "Right") {
         const newThumbToIndexDistance = distance(thumbLandmark, indexLandmark);
-        const newThumbToMiddleDistance = distance(thumbLandmark, middleLandmark);
 
         thumbToIndexDistances.push(newThumbToIndexDistance);
         if (thumbToIndexDistances.length > SMOOTHING_WINDOW_SIZE) {
           thumbToIndexDistances.shift();
-        }
-
-        thumbToMiddleDistances.push(newThumbToMiddleDistance);
-        if (thumbToMiddleDistances.length > SMOOTHING_WINDOW_SIZE) {
-          thumbToMiddleDistances.shift();
         }
 
         // Rotation
@@ -158,11 +154,9 @@ const handGestureHandler = async (simulation: Simulation) => {
           rhRotations.pop();
         }
 
-        console.log(rhCurrentRotation);
-
-        simulation.material.uniforms.u_thumbToIndexDistance.value = distanceAverage(thumbToIndexDistances);
-        simulation.material.uniforms.u_thumbToMiddleDistance.value = distanceAverage(thumbToMiddleDistances);
-        simulation.material.uniforms.u_rightHandRotation.value = rhCurrentRotation;
+        simulation.material.uniforms.u_thumbToIndexDistance.value =
+          DISTANCE_FACTOR * distanceAverage(thumbToIndexDistances);
+        simulation.material.uniforms.u_rightHandRotation.value = DISTANCE_FACTOR * rhCurrentRotation;
       } else {
         const allFingersToThumbDistance =
           distance(thumbLandmark, indexLandmark) +
@@ -170,9 +164,10 @@ const handGestureHandler = async (simulation: Simulation) => {
           distance(thumbLandmark, ringLandmark) +
           distance(thumbLandmark, pinkyLandmark);
 
-        // We only listen to rhRotations if hand is sufficiently open
-        if (allFingersToThumbDistance < ROTATION_OPENNESS_THRESHOLD) {
-          return;
+        const newThumbToMiddleDistance = distance(thumbLandmark, indexLandmark);
+        thumbToMiddleDistances.push(newThumbToMiddleDistance);
+        if (thumbToMiddleDistances.length > SMOOTHING_WINDOW_SIZE) {
+          thumbToMiddleDistances.shift();
         }
 
         const vector = { x: thumbLandmark.x - middleLandmark.x, y: thumbLandmark.y - middleLandmark.y };
@@ -189,7 +184,10 @@ const handGestureHandler = async (simulation: Simulation) => {
         if (lhRotations.length > ROTATION_WINDOW_SIZE) {
           lhRotations.pop();
         }
-        simulation.material.uniforms.u_leftHandRotation.value = lhCurrentRotation;
+
+        simulation.material.uniforms.u_leftHandRotation.value = DISTANCE_FACTOR * lhCurrentRotation;
+        simulation.material.uniforms.u_thumbToMiddleDistance.value =
+          DISTANCE_FACTOR * distanceAverage(thumbToMiddleDistances);
       }
     });
 
