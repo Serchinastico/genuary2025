@@ -2,11 +2,27 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import vertexShader from "./shaders/vertex.glsl";
 import fragmentShader from "./shaders/fragment.fs";
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import { Camera } from "@mediapipe/camera_utils";
+import { HAND_CONNECTIONS, Hands, Landmark, Results } from "@mediapipe/hands";
+import { clamp } from "@/common/math";
 
 const CONFIG = {
-  WIDTH: 1280,
-  HEIGHT: 720,
+  WIDTH: 512,
+  HEIGHT: 512,
 };
+
+const RIGHT_HAND = 0;
+const LEFT_HAND = 1;
+const THUMB = 4;
+const INDEX = 8;
+const MIDDLE = 12;
+
+const SMOOTHING_WINDOW_SIZE = 5;
+const MAX_DISTANCE = 0.15;
+const rotations: number[] = [0];
+const thumbToIndexDistances: number[] = [1];
+const thumbToMiddleDistances: number[] = [1];
 
 interface Simulation {
   material: THREE.ShaderMaterial;
@@ -48,6 +64,10 @@ function createSimulation(): Simulation {
       u_shininess: { value: 16 },
 
       u_time: { value: 0 },
+
+      u_thumbToIndexDistance: { value: 0 },
+      u_thumbToMiddleDistance: { value: 0 },
+      u_handRotation: { value: 0 },
     },
     vertexShader,
     fragmentShader,
@@ -69,7 +89,96 @@ const createCamera = () => {
   return camera;
 };
 
-function main() {
+const distance = (landmark1: Landmark, landmark2: Landmark) => {
+  const vector = {
+    x: landmark1.x - landmark2.x,
+    y: landmark1.y - landmark2.y,
+    z: landmark1.z - landmark2.z,
+  };
+
+  return Math.sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+};
+
+const distanceAverage = (distances: number[]) => {
+  const average = distances.reduce((a, b) => a + b) / distances.length;
+
+  return clamp(average, 0, MAX_DISTANCE) / MAX_DISTANCE;
+};
+
+const handGestureHandler = async (simulation: Simulation) => {
+  function onResults(results: Results) {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    if (results.multiHandWorldLandmarks && results.multiHandWorldLandmarks[LEFT_HAND]) {
+      const leftThumbLandmark = results.multiHandWorldLandmarks[LEFT_HAND][THUMB];
+      const leftMiddleLandmark = results.multiHandWorldLandmarks[LEFT_HAND][MIDDLE];
+
+      const vector = { x: leftThumbLandmark.x - leftMiddleLandmark.x, y: leftThumbLandmark.y - leftMiddleLandmark.y };
+
+      const newAngle = Math.atan2(vector.y, vector.x) * (180 / Math.PI);
+      rotations.push(newAngle);
+      if (rotations.length > SMOOTHING_WINDOW_SIZE) {
+        rotations.shift();
+      }
+      const angle = rotations.reduce((a, b) => a + b) / rotations.length;
+      simulation.material.uniforms.u_handRotation.value = angle;
+    }
+
+    if (results.multiHandWorldLandmarks && results.multiHandWorldLandmarks[RIGHT_HAND]) {
+      const rightThumbLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][THUMB];
+      const rightIndexLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][INDEX];
+      const rightMiddleLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][MIDDLE];
+
+      const newThumbToIndexDistance = distance(rightThumbLandmark, rightIndexLandmark);
+      const newThumbToMiddleDistance = distance(rightThumbLandmark, rightMiddleLandmark);
+
+      thumbToIndexDistances.push(newThumbToIndexDistance);
+      if (thumbToIndexDistances.length > SMOOTHING_WINDOW_SIZE) {
+        thumbToIndexDistances.shift();
+      }
+
+      thumbToMiddleDistances.push(newThumbToMiddleDistance);
+      if (thumbToMiddleDistances.length > SMOOTHING_WINDOW_SIZE) {
+        thumbToMiddleDistances.shift();
+      }
+
+      simulation.material.uniforms.u_thumbToIndexDistance.value = distanceAverage(thumbToIndexDistances);
+      simulation.material.uniforms.u_thumbToMiddleDistance.value = distanceAverage(thumbToMiddleDistances);
+    }
+
+    if (results.multiHandLandmarks) {
+      for (const landmarks of results.multiHandLandmarks) {
+        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: "#2DA04A", lineWidth: 1 });
+        drawLandmarks(canvasCtx, landmarks, { color: "#A32D50", radius: 2 });
+      }
+    }
+    canvasCtx.restore();
+  }
+
+  const button = document.getElementById("webcam-button") as HTMLButtonElement;
+  const video = document.getElementById("webcam") as HTMLVideoElement;
+  const canvasElement = document.getElementById("output_canvas") as HTMLCanvasElement;
+  const canvasCtx = canvasElement.getContext("2d");
+
+  button.addEventListener("click", () => {
+    const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    hands.onResults(onResults);
+
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        await hands.send({ image: video });
+      },
+      width: 256,
+      height: 144,
+    });
+    camera.start();
+  });
+};
+
+async function main() {
   if (document.title !== "Genuary 11") {
     return;
   }
@@ -90,6 +199,8 @@ function main() {
   let frame = 0;
   let cameraForwardPos = new THREE.Vector3(0, 0, -1);
   const VECTOR3ZERO = new THREE.Vector3(0, 0, 0);
+
+  await handGestureHandler(simulation);
 
   function animate() {
     cameraForwardPos = simulation.camera.position

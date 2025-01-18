@@ -23,20 +23,18 @@ uniform float u_ambientIntensity;
 uniform float u_shininess;
 
 uniform float u_time;
+uniform float u_thumbToIndexDistance;
+uniform float u_thumbToMiddleDistance;
+uniform float u_handRotation;
 
-float rand(vec2 n) {
-    return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+float displacement(in vec3 position)
+{
+    return 100. * sin(.02 * position.x) * sin(.02 * position.y) * sin(.02 * position.z);
 }
 
-float noise(vec2 p){
-    vec2 ip = floor(p);
-    vec2 u = fract(p);
-    u = u*u*(3.0-2.0*u);
-
-    float res = mix(
-    mix(rand(ip), rand(ip+vec2(1.0, 0.0)), u.x),
-    mix(rand(ip+vec2(0.0, 1.0)), rand(ip+vec2(1.0, 1.0)), u.x), u.y);
-    return res*res;
+float opDisplace(in vec3 position, in float distance)
+{
+    return distance + displacement(position);
 }
 
 // 2D rotation function
@@ -113,17 +111,107 @@ float sdSphere(vec3 position, float radius)
     return length(position) - radius;
 }
 
+
+vec2 _hash( vec2 p ) // replace this by something better
+{
+    p = vec2( dot(p,vec2(127.1,311.7)),
+    dot(p,vec2(269.5,183.3)) );
+    return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+}
+
+float noise( vec2 p )
+{
+    const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+    const float K2 = 0.211324865; // (3-sqrt(3))/6;
+    vec2 i = floor( p + (p.x+p.y)*K1 );
+
+    vec2 a = p - i + (i.x+i.y)*K2;
+    vec2 o = step(a.yx,a.xy);
+    vec2 b = a - o + K2;
+    vec2 c = a - 1.0 + 2.0*K2;
+    vec3 h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+    vec3 n = h*h*h*h*vec3( dot(a,_hash(i+0.0)), dot(b,_hash(i+o)), dot(c,_hash(i+1.0)));
+    return dot( n, vec3(70.0) );
+}
+
+// from https://www.shadertoy.com/view/4djSRW
+float _hash13(vec3 p3)
+{
+    p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 _hash33(vec3 p3)
+{
+    p3 = fract(p3 * vec3(.1031,.11369,.13787));
+    p3 += dot(p3, p3.yxz+19.19);
+    return -1.0 + 2.0 * fract(vec3((p3.x + p3.y)*p3.z, (p3.x+p3.z)*p3.y, (p3.y+p3.z)*p3.x));
+}
+
+// simplex noise from https://www.shadertoy.com/view/4sc3z2
+float noise(vec3 p)
+{
+    const float K1 = 0.333333333;
+    const float K2 = 0.166666667;
+
+    vec3 i = floor(p + (p.x + p.y + p.z) * K1);
+    vec3 d0 = p - (i - (i.x + i.y + i.z) * K2);
+
+    // thx nikita: https://www.shadertoy.com/view/XsX3zB
+    vec3 e = step(vec3(0.0), d0 - d0.yzx);
+    vec3 i1 = e * (1.0 - e.zxy);
+    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
+
+    vec3 d1 = d0 - (i1 - 1.0 * K2);
+    vec3 d2 = d0 - (i2 - 2.0 * K2);
+    vec3 d3 = d0 - (1.0 - 3.0 * K2);
+
+    vec4 h = max(0.6 - vec4(dot(d0, d0), dot(d1, d1), dot(d2, d2), dot(d3, d3)), 0.0);
+    vec4 n = h * h * h * h * vec4(dot(d0, _hash33(i)), dot(d1, _hash33(i + i1)), dot(d2, _hash33(i + i2)), dot(d3, _hash33(i + 1.0)));
+
+    return dot(vec4(31.316), n);
+}
+
+float fractalNoise(vec3 p, float falloff, int iterations) {
+    float v = 0.0;
+    float amp = 1.0;
+    float invFalloff = 1.0/falloff;
+    for (int i=0; i<10; i++) {
+        v += noise(p)*amp;
+        if (i>=iterations) break;
+        amp *= invFalloff;
+        p *= falloff;
+    }
+    return v;
+}
+
+float fractalNoise(vec3 p) {
+    return fractalNoise(p, 2.5, 5);
+}
+
 float scene(vec3 position)
 {
-    position.z -= u_time * 4.0;
+    position.z -= u_time * 4.;
 
-    position.xyz = mod(position.xyz, 1.0) - .5;
+    position.xyz = mod(position.xyz, 1.) - .5;
+
 
     //    float sphere1Dis = distance(q, vec3(0, 0, 0)) - .01;
     //    float sphere2Dis = distance(q, vec3(0.1, 0.1, 0)) - .05;
     //
     //    return opSmoothUnion(sphere1Dis, sphere2Dis, 0.5);
-    return sdSphere(position, 0.25);
+
+
+//    float d1 = sdSphere(position, .2);
+    float d1 = sdSphere(position, .05 + 0.25 * u_thumbToIndexDistance);
+//    float d1 = opSmoothSubtraction(
+//        distance(position, vec3(0, 0, 0)) - .2,
+//        distance(position, vec3(0.1, 0.1, 0)) - .1,
+//        0.2);
+    float d2 = fractalNoise(position);
+
+    return 0.9 * (1.0 - u_thumbToMiddleDistance) * d1 + 0.1 * u_thumbToMiddleDistance * d2;
 }
 
 
@@ -137,7 +225,7 @@ vec2 rayMarch(vec3 rayOrigin, vec3 rayDirection)
 
     for (i = 0; i < u_maxSteps; ++i) { // main loop
         position = rayOrigin + distance * rayDirection;// calculate new position
-        position.xy *= rot2D(distance * .15 * deformation.x);
+        position.xy *= rot2D(0.025 * u_handRotation * distance * .15 * deformation.x);
         position.y += sin(distance * .05 * (deformation.y + 1.)) * .05;
         sceneDistance = scene(position);// get scene distance
 
@@ -181,7 +269,7 @@ void main() {
 
     // Get ray origin and direction from camera uniforms
     vec3 ro = u_camPos;
-    vec3 rd = (u_camInvProjMat * vec4(uv*2.-1., 0, 1)).xyz;
+    vec3 rd = (u_camInvProjMat * vec4(uv * 2. - 1., 0, 1)).xyz;
     rd = (u_camToWorldMat * vec4(rd, 0)).xyz;
     rd = normalize(rd);
 
@@ -208,7 +296,7 @@ void main() {
 
         float fresnel = numIterations / float(u_maxSteps);
 
-        vec3 color = 0.5 * vec3(fresnel) + 0.5 * palette(disTravelled * 0.04 + float(numIterations) * 0.005);
+        vec3 color = .5 * vec3(fresnel) + .5 * palette(disTravelled * .04);
         gl_FragColor = vec4(color, 1);// color output
     }
 }
