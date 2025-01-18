@@ -25,7 +25,8 @@ uniform float u_shininess;
 uniform float u_time;
 uniform float u_thumbToIndexDistance;
 uniform float u_thumbToMiddleDistance;
-uniform float u_handRotation;
+uniform float u_rightHandRotation;
+uniform float u_leftHandRotation;
 
 float displacement(in vec3 position)
 {
@@ -109,6 +110,19 @@ float opSmoothIntersection(in float d1, in float d2, in float k)
 float sdSphere(vec3 position, float radius)
 {
     return length(position) - radius;
+}
+
+
+float sdBox( vec3 p, vec3 b )
+{
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+float sdRoundBox( vec3 p, vec3 b, float r )
+{
+    vec3 q = abs(p) - b + r;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
 }
 
 
@@ -204,14 +218,19 @@ float scene(vec3 position)
 
 
 //    float d1 = sdSphere(position, .2);
-    float d1 = sdSphere(position, .05 + 0.25 * u_thumbToIndexDistance);
+//    pos.xy *= rot2D(0.025 * u_rightHandRotation);
+
+    position.xy *= rot2D(0.05 * u_rightHandRotation);
+    float d1 = sdRoundBox(position, vec3(.1 + 0.25 * u_thumbToIndexDistance), 0.1 * (1.0 - u_thumbToIndexDistance));
+
 //    float d1 = opSmoothSubtraction(
 //        distance(position, vec3(0, 0, 0)) - .2,
 //        distance(position, vec3(0.1, 0.1, 0)) - .1,
 //        0.2);
-    float d2 = fractalNoise(position);
+//    float d2 = noise(position);
 
-    return 0.9 * (1.0 - u_thumbToMiddleDistance) * d1 + 0.1 * u_thumbToMiddleDistance * d2;
+    return d1;
+//    return 0.9 * (1.0 - u_thumbToMiddleDistance) * d1 + 0.1 * u_thumbToMiddleDistance * d2;
 }
 
 
@@ -225,8 +244,8 @@ vec2 rayMarch(vec3 rayOrigin, vec3 rayDirection)
 
     for (i = 0; i < u_maxSteps; ++i) { // main loop
         position = rayOrigin + distance * rayDirection;// calculate new position
-        position.xy *= rot2D(0.025 * u_handRotation * distance * .15 * deformation.x);
-        position.y += sin(distance * .05 * (deformation.y + 1.)) * .05;
+        position.xy *= rot2D(0.1 * u_leftHandRotation * distance * .15 * deformation.x);
+        position.y += sin(0.01 * distance * .05 * (deformation.y + 1.));
         sceneDistance = scene(position);// get scene distance
 
         // if we have hit anything or our distance is too big, break loop
@@ -285,18 +304,18 @@ void main() {
     vec3 n = normal(hp);
 
     if (disTravelled >= u_maxDis) { // if ray doesn't hit anything
-        gl_FragColor = vec4(u_clearColor, 1);
+        gl_FragColor = vec4(vec3(1.0, 0.0, 0.0), 1);
     } else {
         // Calculate Diffuse model
-        //        float dotNL = dot(n, u_lightDir);
-        //        float diff = max(dotNL, 0.0) * u_diffIntensity;
-        //        float spec = pow(diff, u_shininess) * u_specIntensity;
-        //        float ambient = u_ambientIntensity;
-        //        vec3 color = u_lightColor * (sceneCol(hp) * (spec + ambient + diff));
+        float dotNL = dot(n, u_lightDir);
+        float diff = max(dotNL, 0.0) * u_diffIntensity;
+        float spec = pow(diff, u_shininess) * u_specIntensity;
+        float ambient = u_ambientIntensity;
+        vec3 diffuse = u_lightColor * (vec3(0.2, 0.1, 1.) * (spec + ambient + diff));
 
         float fresnel = numIterations / float(u_maxSteps);
 
-        vec3 color = .5 * vec3(fresnel) + .5 * palette(disTravelled * .04);
+        vec3 color = .9 * vec3(fresnel) + .05 * diffuse + .05 * palette(disTravelled * .02);
         gl_FragColor = vec4(color, 1);// color output
     }
 }

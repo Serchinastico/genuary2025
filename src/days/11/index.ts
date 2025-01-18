@@ -12,15 +12,24 @@ const CONFIG = {
   HEIGHT: 512,
 };
 
-const RIGHT_HAND = 0;
-const LEFT_HAND = 1;
 const THUMB = 4;
 const INDEX = 8;
 const MIDDLE = 12;
+const RING = 16;
+const PINKY = 20;
+
+const ROTATION_FRICTION = 0.9;
+const ROTATION_WINDOW_SIZE = 5;
+const ROTATION_OPENNESS_THRESHOLD = 0.45;
 
 const SMOOTHING_WINDOW_SIZE = 5;
 const MAX_DISTANCE = 0.15;
-const rotations: number[] = [0];
+const lhRotations: number[] = [0];
+let lhCurrentRotation = 0;
+let lhRotationSpeed = 0;
+const rhRotations: number[] = [0];
+let rhCurrentRotation = 0;
+let rhRotationSpeed = 0;
 const thumbToIndexDistances: number[] = [1];
 const thumbToMiddleDistances: number[] = [1];
 
@@ -49,7 +58,7 @@ function createSimulation(): Simulation {
       u_maxDis: { value: 1000 },
       u_maxSteps: { value: 100 },
 
-      u_clearColor: { value: new THREE.Color(0x1d2d1d) },
+      u_clearColor: { value: new THREE.Color(0xff0000) },
 
       u_camPos: { value: camera.position },
       u_camToWorldMat: { value: camera.matrixWorld },
@@ -67,7 +76,8 @@ function createSimulation(): Simulation {
 
       u_thumbToIndexDistance: { value: 0 },
       u_thumbToMiddleDistance: { value: 0 },
-      u_handRotation: { value: 0 },
+      u_rightHandRotation: { value: 0 },
+      u_leftHandRotation: { value: 0 },
     },
     vertexShader,
     fragmentShader,
@@ -111,42 +121,77 @@ const handGestureHandler = async (simulation: Simulation) => {
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-    if (results.multiHandWorldLandmarks && results.multiHandWorldLandmarks[LEFT_HAND]) {
-      const leftThumbLandmark = results.multiHandWorldLandmarks[LEFT_HAND][THUMB];
-      const leftMiddleLandmark = results.multiHandWorldLandmarks[LEFT_HAND][MIDDLE];
+    results.multiHandedness.forEach((hand, index) => {
+      const thumbLandmark = results.multiHandWorldLandmarks[index][THUMB];
+      const indexLandmark = results.multiHandWorldLandmarks[index][INDEX];
+      const middleLandmark = results.multiHandWorldLandmarks[index][MIDDLE];
+      const ringLandmark = results.multiHandWorldLandmarks[index][RING];
+      const pinkyLandmark = results.multiHandWorldLandmarks[index][PINKY];
 
-      const vector = { x: leftThumbLandmark.x - leftMiddleLandmark.x, y: leftThumbLandmark.y - leftMiddleLandmark.y };
+      if (hand.label === "Right") {
+        const newThumbToIndexDistance = distance(thumbLandmark, indexLandmark);
+        const newThumbToMiddleDistance = distance(thumbLandmark, middleLandmark);
 
-      const newAngle = Math.atan2(vector.y, vector.x) * (180 / Math.PI);
-      rotations.push(newAngle);
-      if (rotations.length > SMOOTHING_WINDOW_SIZE) {
-        rotations.shift();
+        thumbToIndexDistances.push(newThumbToIndexDistance);
+        if (thumbToIndexDistances.length > SMOOTHING_WINDOW_SIZE) {
+          thumbToIndexDistances.shift();
+        }
+
+        thumbToMiddleDistances.push(newThumbToMiddleDistance);
+        if (thumbToMiddleDistances.length > SMOOTHING_WINDOW_SIZE) {
+          thumbToMiddleDistances.shift();
+        }
+
+        // Rotation
+        const vector = { x: thumbLandmark.x - middleLandmark.x, y: thumbLandmark.y - middleLandmark.y };
+        const newAngle = Math.atan2(vector.y, vector.x) * (180 / Math.PI) - 90;
+        let deltaAngle = newAngle - rhRotations[0];
+        if (deltaAngle > 180) deltaAngle -= 360;
+        if (deltaAngle < -180) deltaAngle += 360;
+
+        rhRotationSpeed += 0.05 * deltaAngle;
+        rhRotationSpeed *= ROTATION_FRICTION;
+        rhCurrentRotation += rhRotationSpeed;
+
+        rhRotations.unshift(newAngle);
+        if (rhRotations.length > ROTATION_WINDOW_SIZE) {
+          rhRotations.pop();
+        }
+
+        console.log(rhCurrentRotation);
+
+        simulation.material.uniforms.u_thumbToIndexDistance.value = distanceAverage(thumbToIndexDistances);
+        simulation.material.uniforms.u_thumbToMiddleDistance.value = distanceAverage(thumbToMiddleDistances);
+        simulation.material.uniforms.u_rightHandRotation.value = rhCurrentRotation;
+      } else {
+        const allFingersToThumbDistance =
+          distance(thumbLandmark, indexLandmark) +
+          distance(thumbLandmark, middleLandmark) +
+          distance(thumbLandmark, ringLandmark) +
+          distance(thumbLandmark, pinkyLandmark);
+
+        // We only listen to rhRotations if hand is sufficiently open
+        if (allFingersToThumbDistance < ROTATION_OPENNESS_THRESHOLD) {
+          return;
+        }
+
+        const vector = { x: thumbLandmark.x - middleLandmark.x, y: thumbLandmark.y - middleLandmark.y };
+        const newAngle = Math.atan2(vector.y, vector.x) * (180 / Math.PI) - 90;
+        let deltaAngle = newAngle - lhRotations[0];
+        if (deltaAngle > 180) deltaAngle -= 360;
+        if (deltaAngle < -180) deltaAngle += 360;
+
+        lhRotationSpeed += 0.05 * deltaAngle;
+        lhRotationSpeed *= ROTATION_FRICTION;
+        lhCurrentRotation += lhRotationSpeed;
+
+        lhRotations.unshift(newAngle);
+        if (lhRotations.length > ROTATION_WINDOW_SIZE) {
+          lhRotations.pop();
+        }
+        simulation.material.uniforms.u_leftHandRotation.value = lhCurrentRotation;
       }
-      const angle = rotations.reduce((a, b) => a + b) / rotations.length;
-      simulation.material.uniforms.u_handRotation.value = angle;
-    }
-
-    if (results.multiHandWorldLandmarks && results.multiHandWorldLandmarks[RIGHT_HAND]) {
-      const rightThumbLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][THUMB];
-      const rightIndexLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][INDEX];
-      const rightMiddleLandmark = results.multiHandWorldLandmarks[RIGHT_HAND][MIDDLE];
-
-      const newThumbToIndexDistance = distance(rightThumbLandmark, rightIndexLandmark);
-      const newThumbToMiddleDistance = distance(rightThumbLandmark, rightMiddleLandmark);
-
-      thumbToIndexDistances.push(newThumbToIndexDistance);
-      if (thumbToIndexDistances.length > SMOOTHING_WINDOW_SIZE) {
-        thumbToIndexDistances.shift();
-      }
-
-      thumbToMiddleDistances.push(newThumbToMiddleDistance);
-      if (thumbToMiddleDistances.length > SMOOTHING_WINDOW_SIZE) {
-        thumbToMiddleDistances.shift();
-      }
-
-      simulation.material.uniforms.u_thumbToIndexDistance.value = distanceAverage(thumbToIndexDistances);
-      simulation.material.uniforms.u_thumbToMiddleDistance.value = distanceAverage(thumbToMiddleDistances);
-    }
+    });
 
     if (results.multiHandLandmarks) {
       for (const landmarks of results.multiHandLandmarks) {
@@ -171,8 +216,8 @@ const handGestureHandler = async (simulation: Simulation) => {
       onFrame: async () => {
         await hands.send({ image: video });
       },
-      width: 256,
-      height: 144,
+      width: 512,
+      height: 320,
     });
     camera.start();
   });
@@ -190,7 +235,7 @@ async function main() {
   renderer.setSize(CONFIG.WIDTH, CONFIG.HEIGHT);
   document.body.appendChild(renderer.domElement);
 
-  const backgroundColor = new THREE.Color(0x3399ee);
+  const backgroundColor = new THREE.Color(0x000000);
   renderer.setClearColor(backgroundColor, 1);
 
   const controls = new OrbitControls(simulation.camera, renderer.domElement);
